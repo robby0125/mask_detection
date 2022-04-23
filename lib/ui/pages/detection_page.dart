@@ -32,7 +32,29 @@ class DetectionPage extends StatelessWidget {
                     child: CameraPreview(_myCameraController.controller),
                   ),
                 ),
-
+                SafeArea(
+                  minimum: const EdgeInsets.symmetric(vertical: 16),
+                  child: Align(
+                    alignment: Alignment.bottomCenter,
+                    child: TextButton(
+                      onPressed: () {
+                        _myCameraController.switchCamera();
+                      },
+                      child: const Icon(
+                        Icons.cameraswitch,
+                        size: 32,
+                      ),
+                      style: ButtonStyle(
+                        backgroundColor: MaterialStateProperty.all(
+                          Colors.white,
+                        ),
+                        shape: MaterialStateProperty.all(
+                          const CircleBorder(),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               ],
             );
 
