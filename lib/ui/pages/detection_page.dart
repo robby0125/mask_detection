@@ -1,8 +1,10 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:mask_detection/core/controllers/face_detection_controller.dart';
 import 'package:mask_detection/core/controllers/my_camera_controller.dart';
 import 'package:mask_detection/core/states/camera_state.dart';
+import 'package:mask_detection/ui/widgets/face_painter.dart';
 
 class DetectionPage extends StatelessWidget {
   DetectionPage({Key? key}) : super(key: key);
@@ -12,75 +14,45 @@ class DetectionPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.black,
       body: Obx(() {
         final _cameraState = _myCameraController.cameraState;
 
-        switch (_cameraState) {
-          case CameraState.ready:
-            final _deviceRatio = MediaQuery.of(context).size.aspectRatio;
-            final _previewRatio = _myCameraController.aspectRatio;
+        if (_cameraState != CameraState.ready) return Container();
 
-            var scale = _previewRatio * _deviceRatio;
+        final _deviceRatio = MediaQuery.of(context).size.aspectRatio;
+        final _previewRatio = _myCameraController.aspectRatio;
 
-            if (scale < 1) scale = 1 / scale;
+        var _scale = _previewRatio * _deviceRatio;
 
-            return Stack(
-              children: [
-                Transform.scale(
-                  scale: scale,
-                  child: Center(
-                    child: CameraPreview(_myCameraController.controller),
-                  ),
-                ),
-                SafeArea(
-                  minimum: const EdgeInsets.symmetric(vertical: 16),
-                  child: Align(
-                    alignment: Alignment.bottomCenter,
-                    child: TextButton(
-                      onPressed: () {
-                        _myCameraController.switchCamera();
-                      },
-                      child: const Icon(
-                        Icons.cameraswitch,
-                        size: 32,
-                      ),
-                      style: ButtonStyle(
-                        backgroundColor: MaterialStateProperty.all(
-                          Colors.white,
-                        ),
-                        shape: MaterialStateProperty.all(
-                          const CircleBorder(),
-                        ),
-                      ),
+        if (_scale < 1) _scale = 1 / _scale;
+
+        return Transform.scale(
+          scale: _scale,
+          child: Center(
+            child: CameraPreview(
+              _myCameraController.controller,
+              child: GetBuilder<FaceDetectionController>(
+                builder: (newController) => Transform.scale(
+                  scaleX: _myCameraController.isBackCamera ? 1 : -1,
+                  child: CustomPaint(
+                    painter: FacePainter(
+                      rectFaces: newController.rectFaces,
                     ),
                   ),
                 ),
-              ],
-            );
-
-          case CameraState.error:
-            return const Center(
-              child: Text(
-                'Something Wrong!',
-                style: TextStyle(
-                  color: Colors.red,
-                ),
               ),
-            );
-
-          default:
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text('Loading Camera...'),
-                ],
-              ),
-            );
-        }
+            ),
+          ),
+        );
       }),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _myCameraController.switchCamera(),
+        child: const Icon(
+          Icons.cameraswitch,
+        ),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
 }
