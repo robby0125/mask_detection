@@ -1,5 +1,6 @@
 import 'dart:developer';
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
@@ -12,11 +13,14 @@ import 'package:mask_detection/core/utils/image_converter.dart';
 class FaceDetectionController extends GetxController {
   late final FaceDetectorOptions _detectorOptions;
   late final FaceDetector _detector;
+  final Rx<ui.Image?> _faceImage = Rx(null);
 
   List<Rect> rectFaces = [];
   List<Uint8List> facesData = [];
 
   bool _onDetection = false;
+
+  ui.Image? get faceImage => _faceImage.value;
 
   @override
   void onInit() {
@@ -102,12 +106,18 @@ class FaceDetectionController extends GetxController {
       facesData.add(
         _cropFaceRect(
           cameraImage: cameraImage,
-          faceRect: _rect,
+          faceRect: _boundingBox,
         ),
       );
     }
 
     log(facesData.toString());
+
+    if (facesData.isNotEmpty) {
+      _faceImage.value = await ImageConverter.bytesToImage(facesData[0]);
+    } else {
+      _faceImage.value = null;
+    }
 
     _onDetection = false;
 

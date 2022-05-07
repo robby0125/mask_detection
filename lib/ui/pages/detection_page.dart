@@ -27,23 +27,54 @@ class DetectionPage extends StatelessWidget {
 
         if (_scale < 1) _scale = 1 / _scale;
 
-        return Transform.scale(
-          scale: _scale,
-          child: Center(
-            child: CameraPreview(
-              _myCameraController.controller,
-              child: GetBuilder<FaceDetectionController>(
-                builder: (newController) => Transform.scale(
-                  scaleX: _myCameraController.isBackCamera ? 1 : -1,
-                  child: CustomPaint(
-                    painter: FacePainter(
-                      rectFaces: newController.rectFaces,
+        return Stack(
+          children: [
+            Transform.scale(
+              scale: _scale,
+              child: Center(
+                child: CameraPreview(
+                  _myCameraController.controller,
+                  child: GetBuilder<FaceDetectionController>(
+                    builder: (newController) => Transform.scale(
+                      scaleX: _myCameraController.isBackCamera ? 1 : -1,
+                      child: CustomPaint(
+                        painter: FacePainter(
+                          rectFaces: newController.rectFaces,
+                        ),
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
-          ),
+            SafeArea(
+              child: GetBuilder<FaceDetectionController>(
+                builder: (newController) {
+                  final _faceImage = newController.faceImage;
+
+                  return _faceImage == null
+                      ? Container(
+                          width: 100,
+                          height: 100,
+                          color: Colors.black,
+                          alignment: Alignment.center,
+                          child: const Text(
+                            'No Face Detected',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.white,
+                            ),
+                          ),
+                        )
+                      : RawImage(
+                          image: _faceImage,
+                          width: 100,
+                          height: 100,
+                        );
+                },
+              ),
+            ),
+          ],
         );
       }),
       floatingActionButton: FloatingActionButton(

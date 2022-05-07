@@ -1,4 +1,6 @@
 import 'dart:developer';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:camera/camera.dart';
 import 'package:image/image.dart';
@@ -55,5 +57,12 @@ abstract class ImageConverter {
     }
 
     return _img;
+  }
+
+  static Future<ui.Image> bytesToImage(Uint8List imgBytes) async {
+    final _codec = await ui.instantiateImageCodec(imgBytes);
+    final _frame = await _codec.getNextFrame();
+
+    return _frame.image;
   }
 }
