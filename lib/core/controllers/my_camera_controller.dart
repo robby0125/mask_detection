@@ -55,6 +55,7 @@ class MyCameraController extends GetxController {
       _cameras[_isBackCamera ? 0 : 1],
       ResolutionPreset.max,
     );
+    _faceDetectionController.isBackCamera = _isBackCamera;
 
     await _initCamera();
   }

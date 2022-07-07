@@ -1,14 +1,14 @@
-import 'dart:developer';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/painting.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
-import 'package:image/image.dart';
+import 'package:image/image.dart' as img;
 import 'package:mask_detection/core/utils/image_converter.dart';
+import 'package:tflite/tflite.dart';
 
 class FaceDetectionController extends GetxController {
   late final FaceDetectorOptions _detectorOptions;
@@ -16,18 +16,31 @@ class FaceDetectionController extends GetxController {
   final Rx<ui.Image?> _faceImage = Rx(null);
 
   List<Rect> rectFaces = [];
-  List<Uint8List> facesData = [];
+  List<img.Image> facesData = [];
+  List<int> detectionResult = [];
 
+  bool isBackCamera = true;
   bool _onDetection = false;
 
   ui.Image? get faceImage => _faceImage.value;
 
   @override
-  void onInit() {
+  void onInit() async {
     super.onInit();
 
     _detectorOptions = const FaceDetectorOptions();
     _detector = FaceDetector(options: _detectorOptions);
+
+    await Tflite.loadModel(
+      model: 'assets/model.tflite',
+      labels: 'assets/labels.txt',
+    );
+  }
+
+  @override
+  void onClose() async {
+    super.onClose();
+    await Tflite.close();
   }
 
   void processInputImage({
@@ -111,10 +124,8 @@ class FaceDetectionController extends GetxController {
       );
     }
 
-    log(facesData.toString());
-
     if (facesData.isNotEmpty) {
-      _faceImage.value = await ImageConverter.bytesToImage(facesData[0]);
+      await _classify();
     } else {
       _faceImage.value = null;
     }
@@ -124,19 +135,66 @@ class FaceDetectionController extends GetxController {
     update();
   }
 
-  Uint8List _cropFaceRect({
+  img.Image _cropFaceRect({
     required CameraImage cameraImage,
     required Rect faceRect,
   }) {
-    final _image = copyRotate(ImageConverter.convertToImage(cameraImage), -90);
-    final _faceCropped = copyCrop(
+    final _image = img.copyRotate(
+      ImageConverter.convertToImage(cameraImage),
+      isBackCamera ? 90 : -90,
+    );
+    final _faceCropped = img.copyCrop(
       _image,
       faceRect.left.round(),
       faceRect.top.round(),
       faceRect.width.round(),
       faceRect.height.round(),
     );
+    final _resized = img.copyResize(
+      _faceCropped,
+      width: 150,
+      height: 150,
+    );
 
-    return Uint8List.fromList(encodePng(_faceCropped));
+    return _resized;
+  }
+
+  Uint8List _imageToByteListFloat32({
+    required img.Image image,
+    required int inputSize,
+    required double mean,
+    required double std,
+  }) {
+    var convertedBytes = Float32List(1 * inputSize * inputSize * 3);
+    var buffer = Float32List.view(convertedBytes.buffer);
+    int pixelIndex = 0;
+    for (var i = 0; i < inputSize; i++) {
+      for (var j = 0; j < inputSize; j++) {
+        var pixel = image.getPixel(j, i);
+        buffer[pixelIndex++] = (img.getRed(pixel) - mean) / std;
+        buffer[pixelIndex++] = (img.getGreen(pixel) - mean) / std;
+        buffer[pixelIndex++] = (img.getBlue(pixel) - mean) / std;
+      }
+    }
+    return convertedBytes.buffer.asUint8List();
+  }
+
+  Future<void> _classify() async {
+    detectionResult.clear();
+
+    for (var face in facesData) {
+      final result = await Tflite.runModelOnBinary(
+        binary: _imageToByteListFloat32(
+          image: face,
+          inputSize: 150,
+          mean: 0,
+          std: 255,
+        ),
+        numResults: 2,
+        threshold: 0,
+        asynch: false,
+      );
+      detectionResult.add(result![0]['index']);
+    }
   }
 }

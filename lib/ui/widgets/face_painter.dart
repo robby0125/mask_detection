@@ -3,20 +3,24 @@ import 'package:flutter/material.dart';
 class FacePainter extends CustomPainter {
   const FacePainter({
     required this.rectFaces,
+    required this.detectionResult,
   });
 
   final List<Rect> rectFaces;
+  final List<int> detectionResult;
 
   @override
   void paint(Canvas canvas, Size size) {
     final _paint = Paint()
-      ..color = Colors.green
       ..style = PaintingStyle.stroke
       ..strokeJoin = StrokeJoin.round
-      ..strokeWidth = 2.0;
+      ..strokeWidth = 2.5;
 
-    for (Rect rect in rectFaces) {
-      canvas.drawRect(rect, _paint);
+    if (rectFaces.length != detectionResult.length) return;
+
+    for (int i = 0; i < rectFaces.length; i++) {
+      _paint.color = detectionResult[i] == 0 ? Colors.green : Colors.red;
+      canvas.drawRect(rectFaces[i], _paint);
     }
   }
 
